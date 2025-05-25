@@ -1,0 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String      @id @default(uuid())
+  name          String
+  email         String      @unique
+  password      String
+  department    Department  @relation(fields: [departmentId], references: [id])
+  departmentId  String
+  role          Role        @default(USER)
+  status        UserStatus  @default(ACTIVE)
+  lastLogin     DateTime?
+  completedCourses Int      @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  userCourses   UserCourse[]
+}
+
+model Department {
+  id                  String  @id @default(uuid())
+  name                String  @unique
+  accessAllCourses    Boolean @default(true)
+  accessAllTracks     Boolean @default(true)
+  simultaneousCourses Int     @default(5)
+  certificatePermission Boolean @default(true)
+  users               User[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Course {
+  id          String      @id @default(uuid())
+  title       String
+  description String?
+  status      CourseStatus @default(ACTIVE)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  userCourses UserCourse[]
+}
+
+model UserCourse {
+  id        String    @id @default(uuid())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+  course    Course    @relation(fields: [courseId], references: [id])
+  courseId  String
+  progress  Int       @default(0)
+  completed Boolean   @default(false)
+  grade     Float?
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([userId, courseId])
+}
+
+model SystemConfig {
+  id                      String  @id @default(uuid())
+  autoRegister            Boolean @default(false)
+  manualApproval          Boolean @default(true)
+  inactivityBlockDays     Int     @default(30)
+  inactivityBlockEnabled  Boolean @default(false)
+  userLimit               Int     @default(2000)
+  userLimitEnabled        Boolean @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+
+model Metrics {
+  id                String   @id @default(uuid())
+  date              DateTime @default(now())
+  totalUsers        Int
+  activeUsers       Int
+  totalCourses      Int
+  activeCourses     Int
+  completionRate    Float
+  averageGrade      Float
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model UserActivity {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  timestamp DateTime @default(now())
+  details   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CourseStatus {
+  ACTIVE
+  INACTIVE
+}
