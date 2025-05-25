@@ -126,3 +126,90 @@ A API utiliza autenticação JWT. Para acessar endpoints protegidos:
 ## Usuário Administrador Padrão
 
 Para o primeiro acesso, você pode criar um usuário administrador usando o endpoint `POST /api/users` sem autenticação.
+
+## FLUXO DE DIAGRAMA
++-------------------+       +-----------------------+
+|      User         |       |      Department       |
++-------------------+       +-----------------------+
+| id (PK)           |------>| id (PK)               |
+| name              |       | name (UNIQUE)         |
+| email (UNIQUE)    |       | accessAllCourses      |
+| password          |       | accessAllTracks       |
+| departmentId (FK) |       | simultaneousCourses   |
+| role              |       | certificatePermission |
+| status            |       | createdAt             |
+| lastLogin         |       | updatedAt             |
+| completedCourses  |       +-----------------------+
+| createdAt         |
+| updatedAt         |
++-------------------+
+        |
+        | 1..*
+        v
++-------------------+
+|    UserCourse     |
++-------------------+
+| id (PK)           |
+| userId (FK)       |------+
+| courseId (FK)     |----+ |
+| progress          |    | |
+| completed         |    | |
+| grade             |    | |
+| startDate         |    | |
+| endDate           |    | |
+| createdAt         |    | |
+| updatedAt         |    | |
++-------------------+    | |
+                         | |
++-------------------+    | |    +-------------------+
+|      Course       |    | |    |   SystemConfig    |
++-------------------+    | |    +-------------------+
+| id (PK)           |<---+ |    | id (PK)           |
+| title             |      |    | autoRegister      |
+| description       |      |    | manualApproval    |
+| status            |      |    | inactivityBlockDays
+| createdAt         |      |    | inactivityBlockEnabled
+| updatedAt         |      |    | userLimit         |
++-------------------+      |    | userLimitEnabled  |
+                           |    | createdAt         |
++-------------------+      |    | updatedAt         |
+|     Metrics       |      |    +-------------------+
++-------------------+      |
+| id (PK)           |      |
+| date              |      |
+| totalUsers        |      |
+| activeUsers       |      |
+| totalCourses      |      |
+| activeCourses     |      |    +-------------------+
+| completionRate    |      |    |   UserActivity    |
+| averageGrade      |      |    +-------------------+
+| createdAt         |      |    | id (PK)           |
+| updatedAt         |      +----| userId (FK)       |
++-------------------+           | action            |
+                                | timestamp         |
+                                | details           |
+                                | createdAt         |
+                                | updatedAt         |
+                                +-------------------+
+
+
+## Relacionamentos Principais
+
+### 1. User ↔ Department (N:1)
+- **Departamento → Usuários**: Um departamento pode ter múltiplos usuários (`users User[]`)
+- **Usuário → Departamento**: Cada usuário pertence a **exatamente um** departamento (`department Department @relation` + `departmentId String`)
+
+### 2. User ↔ UserCourse (1:N)
+- **Usuário → Cursos**: Um usuário pode ter múltiplas matrículas (`userCourses UserCourse[]`)
+- **Matrícula → Usuário**: Cada `UserCourse` referencia um único usuário (`user User @relation` + `userId String`)
+
+### 3. Course ↔ UserCourse (1:N)
+- **Curso → Matrículas**: Um curso pode ter múltiplos registros de matrícula (`userCourses UserCourse[]`)
+- **Matrícula → Curso**: Cada `UserCourse` referencia um único curso (`course Course @relation` + `courseId String`)
+
+### 4. User ↔ UserActivity (1:N)
+- **Usuário → Atividades**: Um usuário pode ter múltiplos logs de atividade (`UserActivity` não tem relação inversa explícita)
+- **Atividade → Usuário**: Cada registro referencia um usuário (`userId String`)
+
+### Restrição Única
+- **Chave composta em `UserCourse`**: Impede matrículas duplicadas (`@@unique([userId, courseId])`)
